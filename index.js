@@ -25,7 +25,7 @@ module.exports = function( Collection ) {
                     res.end( JSON.stringify( this ) );
                 } ).fetch({ data: req.query });
         } else {
-            var m = new Model({ id: uri( req.url });
+            var m = new Model({ id: uri( req.url ) });
             new Collection().add( m );
             m.on( "sync", function() {
                 res.end( JSON.stringify( this ) );
@@ -37,7 +37,7 @@ module.exports = function( Collection ) {
         if ( req.url == "/" ) {
             return post( req, res ); // PUT can be used for creation as well
         }
-        var m = new Model({ id: uri( req.url });
+        var m = new Model({ id: uri( req.url ) });
         new Collection().add( m );
         m.on( "sync", function() {
             res.end( JSON.stringify( this ) );
@@ -48,7 +48,7 @@ module.exports = function( Collection ) {
         if ( req.url == "/" ) {
             return post( req, res ); // PUT can be used for creation as well
         }
-        var m = new Model({ id: uri( req.url });
+        var m = new Model({ id: uri( req.url ) });
         new Collection().add( m );
         m.on( "sync", function() {
             res.end( JSON.stringify( this ) );
