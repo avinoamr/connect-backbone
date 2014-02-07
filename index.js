@@ -6,7 +6,7 @@ module.exports = function( Collection ) {
     };
 
     var post = function( req, res ) {
-        if ( !uri( req.url ) ) {
+        if ( uri( req.url ) ) {
             res.writeHead( 400 );
             return res.end();
         }
