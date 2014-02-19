@@ -8,14 +8,10 @@ A middleware for creating RESTful APIs in Connect and Express applications that 
 ```javascript
 var connect = require("connect");
 var backbone = require("backbone");
-var connect_backbone = require("connect-backbone");
-
 var MyModel = backbone.Model.extend({ ... });
-var MyCollection = backbone.Collection.extend({
-    model: MyModel
-});
+var MyCollection = backbone.Collection.extend({});
 
 connect()
-    .use( "/my", connect_backbone( MyCollection ) )
+    .use( "/my", require("connect-backbone")( MyModel, MyCollection ) )
     .listen( 8000 );
 ```
