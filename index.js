@@ -6,24 +6,14 @@ var attach = function( resource ) {
                     cb( null, this );
                 }).once( "invalid error", function( m, err ) {
                     cb( err );
-                }).once( "error", function( m, err ) {
-                    if ( [ "NotFound", "NotFoundError" ].indexOf( err.name ) != -1 ) {
-                        cb( null, err.toString(), 404 );
-                    } else {
-                        cb( err );
-                    }
                 });
         }
     };
 };
 
-var uri = function( url ) {
-    return url.replace( /^\/|\/$/g, "" );
-};
-
 module.exports = function( Model, Collection ) {
     var fn = function( req, res, next ) {
-        req.uri = uri( req.url );
+        req.uri = req.url.replace( /^\/|\/$/g, "" );
         if ( req.uri.indexOf( "/" ) != -1 ) return next(); // not a valid id
         var method = {
             "POST": fn.update,
