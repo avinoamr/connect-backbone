@@ -4,8 +4,8 @@ var attach = function( resource ) {
             return resource
                 .once( "sync", function() {
                     cb( null, this );
-                }).once( "invalid", function( m, err ) {
-                    cb( null, err.toString(), 400 );
+                }).once( "invalid error", function( m, err ) {
+                    cb( err );
                 }).once( "error", function( m, err ) {
                     if ( [ "NotFound", "NotFoundError" ].indexOf( err.name ) != -1 ) {
                         cb( null, err.toString(), 404 );
@@ -34,26 +34,7 @@ module.exports = function( Model, Collection ) {
         }[ req.method ];
 
         if ( !method ) return next();
-        method( req, function( err, out, code ) {
-            if ( !err && out && typeof out != "string" ) {
-                try {
-                    out = JSON.stringify( out )
-                } catch ( e ) {
-                    err = e;
-                }
-            }
-
-            if ( err ) {
-                code || ( code = 500 );
-                console.error( err );
-                res.writeHead( code )
-            } else {
-                code && res.writeHead( code );
-                res.write( out );
-            }
-            res.end();
-
-        });
+        method( req, module.exports.to_res( res ) );
     };
 
     fn.update = function( req, cb ) {
@@ -78,4 +59,37 @@ module.exports = function( Model, Collection ) {
     };
 
     return fn;
+};
+
+module.exports.to_res = function( res ) {
+    return function ( err, out ) {
+        var code;
+        if ( !err && out && typeof out != "string" ) {
+            try {
+                out = JSON.stringify( out )
+            } catch ( e ) {
+                code = 500;
+                out = null;
+            }
+        } else if ( err ) {
+            if ( typeof err == "string" ) {
+                err = new Error( err );
+                err.name = "Invalid"
+            }
+
+            out = err.toString();
+            if ( [ "NotFound", "NotFoundError" ].indexOf( err.name ) != -1 ) {
+                code = 404;
+            } else if ( [ "ValidationError", "Invalid" ].indexOf( err.name ) != -1 ) {
+                code = 400;
+            } else {
+                code = 500;
+                out = null;
+            }
+        }
+
+        code && res.writeHead( code );
+        out && res.write( out );
+        res.end();
+    }
 };
