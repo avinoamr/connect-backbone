@@ -1,66 +1,81 @@
-module.exports = function( Collection ) {
-    var Model = new Collection().model;
-
-    var uri = function( uri ) {
-        return uri.replace( /^\/|\/$/g, "" );
-    };
-
-    var post = function( req, res ) {
-        if ( uri( req.url ) ) {
-            res.writeHead( 400 );
-            return res.end();
-        }
-
-        new Collection()
-            .create( req.body )
-            .on( "sync", function() {
-                res.end( JSON.stringify( this ) );
-            });
-    };
-
-    var get = function( req, res ) {
-        if ( req.url == "/" ) {
-            new Collection()
-                .on( "sync", function() {
-                    res.end( JSON.stringify( this ) );
-                } ).fetch({ data: req.query });
-        } else {
-            var m = new Model({ id: uri( req.url ) });
-            new Collection().add( m );
-            m.on( "sync", function() {
-                res.end( JSON.stringify( this ) );
-            }).fetch();
+var attach = function( resource ) {
+    return {
+        to: function( cb ) {
+            return resource
+                .once( "sync", function() {
+                    cb( null, this );
+                }).once( "invalid", function( m, err ) {
+                    cb( null, err.toString(), 400 );
+                }).once( "error", function( m, err ) {
+                    if ( [ "NotFound", "NotFoundError" ].indexOf( err.name ) != -1 ) {
+                        cb( null, err.toString(), 404 );
+                    } else {
+                        cb( err );
+                    }
+                });
         }
     };
+};
 
-    var put = function( req, res ) {
-        if ( req.url == "/" ) {
-            return post( req, res ); // PUT can be used for creation as well
-        }
-        var m = new Model({ id: uri( req.url ) });
-        new Collection().add( m );
-        m.on( "sync", function() {
-            res.end( JSON.stringify( this ) );
-        }).save( req.body );
+var uri = function( url ) {
+    return url.replace( /^\/|\/$/g, "" );
+};
+
+module.exports = function( Model, Collection ) {
+    var fn = function( req, res, next ) {
+        req.uri = uri( req.url );
+        if ( req.uri.indexOf( "/" ) != -1 ) return next(); // not a valid id
+        var method = {
+            "POST": fn.update,
+            "PUT": fn.update,
+            "GET": ( req.uri ) ? fn.read: fn.search,
+            "DELETE": fn.delete,
+            "PATCH": fn.patch,
+        }[ req.method ];
+
+        if ( !method ) return next();
+        method( req, function( err, out, code ) {
+            if ( !err && out && typeof out != "string" ) {
+                try {
+                    out = JSON.stringify( out )
+                } catch ( e ) {
+                    err = e;
+                }
+            }
+
+            if ( err ) {
+                code || ( code = 500 );
+                console.error( err );
+                res.writeHead( code )
+            } else {
+                code && res.writeHead( code );
+                res.write( out );
+            }
+            res.end();
+
+        });
     };
 
-    var remove = function( req, res ) {
-        if ( req.url == "/" ) {
-            return post( req, res ); // PUT can be used for creation as well
-        }
-        var m = new Model({ id: uri( req.url ) });
-        new Collection().add( m );
-        m.on( "sync", function() {
-            res.end( JSON.stringify( this ) );
-        }).destroy();
+    fn.update = function( req, cb ) {
+        var spec = ( req.uri ) ? { id: req.uri } : null;
+        attach( new Model( spec ) ).to( cb ).save( req.body );
     };
 
-    return function( req, res, next ) {
-        return {
-            "POST": post,
-            "PUT": put,
-            "GET": get,
-            "DELETE": remove
-        }[ req.method ]( req, res );
-    }
+    fn.read = function( req, cb ) {
+        attach( new Model( { id: req.uri } ) ).to( cb ).fetch();
+    };
+
+    fn.delete = function( req, cb ) {
+        attach( new Model( { id: req.uri } ) ).to( cb ).destroy();
+    };
+
+    fn.search = function( req, cb ) {
+        attach( new Collection() ).to( cb ).fetch( { data: req.query } );
+    };
+
+    fn.patch = function( req, cb ) {
+        attach( new Model({ id: req.uri }) ).to( cb ).save( req.body, { patch: true } );
+    };
+
+    return fn;
 };

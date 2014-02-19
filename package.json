@@ -1,6 +1,6 @@
 {
     "name": "connect-backbone",
-    "version": "0.0.6",
+    "version": "0.0.8",
     "description": "A middleware for creating RESTful APIs in Connect and Express applications that uses Backbone Models",
     "keywords": [ "rest", "backbone", "connect", "middleware", "express" ],
     "author": "Roi Avinoam <avinoamr@gmail.com>",
@@ -8,9 +8,18 @@
         "type": "git",
         "url": "https://github.com/avinoamr/connect-backbone.git"
     },
+    "devDependencies": {
+        "connect": "*",
+        "backbone": "*",
+        "backsync": "*",
+        "mocha": "*"
+    },
     "main": "index",
     "license": "MIT",
     "engines": {
         "node": "*"
+    },
+    "scripts": {
+        "test": "node_modules/mocha/bin/mocha"
     }
 }
