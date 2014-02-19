@@ -1,16 +1,3 @@
-var attach = function( resource ) {
-    return {
-        to: function( cb ) {
-            return resource
-                .once( "sync", function() {
-                    cb( null, this );
-                }).once( "invalid error", function( m, err ) {
-                    cb( err );
-                });
-        }
-    };
-};
-
 module.exports = function( Model, Collection ) {
     var fn = function( req, res, next ) {
         req.uri = req.url.replace( /^\/|\/$/g, "" );
@@ -51,6 +38,23 @@ module.exports = function( Model, Collection ) {
     return fn;
 };
 
+// attachs a callback to all of the relevant changes on a resource (model or
+// collection)
+var attach = module.exports.attach = function( resource ) {
+    return {
+        to: function( cb ) {
+            return resource
+                .once( "sync", function() {
+                    cb( null, this );
+                }).once( "invalid error", function( m, err ) {
+                    cb( err );
+                });
+        }
+    };
+};
+
+// returns a callback that transform a normal err-result tuple into an
+// http response
 module.exports.to_res = function( res ) {
     return function ( err, out ) {
         var code;
