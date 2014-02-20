@@ -1,6 +1,7 @@
 module.exports = function( Model, Collection ) {
     var fn = function( req, res, next ) {
-        req.uri = req.url.replace( /^\/|\/$/g, "" );
+        var path = req.path || req.url.split( /\?|\&/ )[ 0 ]; // strip query-string
+        req.uri = path.replace( /^\/|\/$/g, "" );
         if ( req.uri.indexOf( "/" ) != -1 ) return next(); // not a valid id
         var method = {
             "POST": fn.update,

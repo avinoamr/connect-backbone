@@ -49,6 +49,15 @@ describe( "connect-backbone", function() {
     });
 
 
+    it( "strips the query string", function( done ) {
+        var req = { url: "/okay/hello/?foo=bar", method: "GET" };
+        connect.backbone()( req, null, function() {
+            assert.equal( req.uri, "okay/hello" );
+            done();
+        } );
+    });
+
+
     it( "creates a Model with POST", function( done ) {
         var out = "";
         connect.backbone( Model, Collection )(
