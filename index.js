@@ -1,90 +1,82 @@
-module.exports = function( Model, Collection ) {
-    var fn = function( req, res, next ) {
-        var path = req.path || req.url.split( /\?|\&/ )[ 0 ]; // strip query-string
-        req.uri = path.replace( /^\/|\/$/g, "" );
-        if ( req.uri.indexOf( "/" ) != -1 ) return next(); // not a valid id
-        var method = {
-            "POST": fn.update,
-            "PUT": fn.update,
-            "GET": ( req.uri ) ? fn.read: fn.search,
-            "DELETE": fn.delete,
-            "PATCH": fn.patch,
-        }[ req.method ];
+var url = require( "url" );
 
-        if ( !method ) return next();
-        method( req, module.exports.to_res( res ) );
-    };
+// IMPORTANT NOTE: This method will give the client unrestricted ability to
+// modify the data and query the database - take steps to apply the relevant
+// restrictions prior to using this middleware.
+module.exports = function ( Collection ) {
+    var map = null;
+    var is_rest = false;
 
-    fn.update = function( req, cb ) {
-        var spec = ( req.uri ) ? { id: req.uri } : null;
-        attach( new Model( spec ) ).to( cb ).save( req.body );
-    };
-
-    fn.read = function( req, cb ) {
-        attach( new Model( { id: req.uri } ) ).to( cb ).fetch();
-    };
-
-    fn.delete = function( req, cb ) {
-        attach( new Model( { id: req.uri } ) ).to( cb ).destroy();
-    };
-
-    fn.search = function( req, cb ) {
-        attach( new Collection() ).to( cb ).fetch( { data: req.query } );
-    };
-
-    fn.patch = function( req, cb ) {
-        attach( new Model({ id: req.uri }) ).to( cb ).save( req.body, { patch: true } );
-    };
-
-    return fn;
-};
-
-// attachs a callback to all of the relevant changes on a resource (model or
-// collection)
-var attach = module.exports.attach = function( resource ) {
-    return {
-        to: function( cb ) {
-            return resource
-                .once( "sync", function() {
-                    cb( null, this );
-                }).once( "invalid error", function( m, err ) {
-                    cb( err );
-                });
+    // it's advised to use the `connect-callback` package as it supports a wide
+    // variety of RESTful error codes and responses
+    var callback = function( res, err, out ) {
+        if ( map && out ) {
+            if ( out.models ) out.models = out.models.map( map );
+            else if ( out.attributes ) out = map( out );
         }
+        if ( res.callback ) { return res.callback( err, out ); }
+        if ( err ) {
+            res.writeHead( 500, "Internal Server Error" );
+        }
+        if ( out ) {
+            if ( typeof out != "string" ) {
+                out = JSON.stringify( out );
+            }
+            res.write( out );
+        }
+        res.end()
     };
-};
 
-// returns a callback that transform a normal err-result tuple into an
-// http response
-module.exports.to_res = function( res ) {
-    return function ( err, out ) {
-        var code;
-        if ( !err && out && typeof out != "string" ) {
-            try {
-                out = JSON.stringify( out )
-            } catch ( e ) {
-                code = 500;
-                out = null;
-            }
-        } else if ( err ) {
-            if ( typeof err == "string" ) {
-                err = new Error( err );
-                err.name = "Invalid"
-            }
+    // middleware to extend the request object with a model or collection
+    var middleware = function( req, res, next ) {
 
-            out = err.toString();
-            if ( [ "NotFound", "NotFoundError" ].indexOf( err.name ) != -1 ) {
-                code = 404;
-            } else if ( [ "ValidationError", "Invalid" ].indexOf( err.name ) != -1 ) {
-                code = 400;
+        // extract the resource ID from the url
+        var id = url.parse( req.url ).pathname.replace( /^\/|\/$/g, "" )
+                    .split( "/" )[ 0 ]; // just take the first part
+
+        var collection = new Collection()
+            .on( "destroy", ( m ) -> callback( req ) )
+            .on( "error invalid", ( m, err ) -> callback( req, err ) )
+
+        // create
+        if ( !id && req.method == "POST" ) {
+            req.model = collection.add( new collection.model() )
+            return next()
+        }
+
+        var query = id ? { id: id } : req.query;
+        collection.fetch({ data: query, success: function( c ) {
+            if ( id ) {
+                req.model = c.models[ 0 ] || c.add( new c.model( { id: id } ) );
             } else {
-                code = 500;
-                out = null;
+                req.collection = c;
             }
-        }
+            if ( !is_rest ) return next();
 
-        code && res.writeHead( code );
-        out && res.write( out );
-        res.end();
-    }
+            // restful response
+            if ( req.model && [ "POST", "PUT", "PATCH" ].indexOf( req.method ) != -1 ) {
+                req.model.save( req.body, {
+                    success: function( m ) { callback( res, null, m ); }
+                });
+            } else if ( req.method == "GET" ) {
+                callback( res, req.model || req.collection );
+            } else if ( req.model && req.method == "DELETE" ) {
+                req.model.destroy({
+                    success: function( m ) { callback( res, null, m ); }
+                })
+            } else {
+                callback( true, "Unknown request" );
+            }
+
+        });
+    };
+
+    // middleware to completely handle RESTful requests to modify these
+    // resources.
+    middleware.rest = function( fn ) {
+        if ( fn ) map = fn;
+        return middleware;
+    };
+
+    return middleware;
 };
