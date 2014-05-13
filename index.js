@@ -6,7 +6,7 @@ module.exports = function ( Collection ) {
         // extract the resource ID from the url
         path = req.path || req.url.split( /\?|\&/ )[ 0 ]; // strip query-string
         path = path.replace( /^\/|\/$/g, "" ); // strip wrapping slashes
-        id = path.split( "/" ).path[ 0 ]; // just take the first part
+        id = path.split( "/" )[ 0 ]; // just take the first part
 
         if ( id ) {
             model = new collection.model({ id: id })
@@ -33,7 +33,7 @@ module.exports = function ( Collection ) {
         var on_success = function( m, r, options ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
-            res.write( err.toString() );
+            res.write( JSON.toString( m ) );
             res.end()
         }
         
