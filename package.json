@@ -1,15 +1,12 @@
 {
     "name": "connect-backbone",
-    "version": "0.2.0",
+    "version": "1.1.0",
     "description": "A middleware for creating RESTful APIs in Connect and Express applications that uses Backbone Models",
     "keywords": [ "rest", "backbone", "connect", "middleware", "express" ],
     "author": "Roi Avinoam <avinoamr@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/avinoamr/connect-backbone.git"
-    },
-    "devDependencies": {
-        "connect": "2.13.0"
     },
     "devDependencies": {
         "backbone": "*",
