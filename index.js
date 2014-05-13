@@ -33,7 +33,7 @@ module.exports = function ( Collection ) {
         var on_success = function( m, r, options ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
-            res.write( JSON.toString( m ) );
+            res.write( JSON.stringify( m ) );
             res.end()
         }
         
