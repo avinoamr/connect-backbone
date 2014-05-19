@@ -17,14 +17,14 @@ module.exports = function ( Collection ) {
         var on_error = function( m, err, options ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
+            var code = 500, msg = "Internal Server Error";
             if ( [ "NotFoundError", "NotFound" ].indexOf( err.name ) == -1 ) {
-                _res.writeHead( 500, "Internal Server Error" );
-                _res.write( "Internal Server Error" );
-            } else {
-                _res.writeHead( 404, "Not Found" );
-                _res.write( "Not Found" );
+                code = 404
+                msg = "Not Found"
             }
             
+            _res.writeHead( code, msg );
+            _res.write( msg );
             _res.end()
         };
 
