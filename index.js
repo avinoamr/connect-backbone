@@ -17,24 +17,30 @@ module.exports = function ( Collection ) {
         var on_error = function( m, err, options ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
-            res.writeHead( 500, "Internal Server Error" );
-            res.write( "Internal Server Error" );
-            res.end()
+            if ( [ "NotFoundError", "NotFound" ].indexOf( err.name ) == -1 ) {
+                _res.writeHead( 500, "Internal Server Error" );
+                _res.write( "Internal Server Error" );
+            } else {
+                _res.writeHead( 404, "Not Found" );
+                _res.write( "Not Found" );
+            }
+            
+            _res.end()
         };
 
         var on_invalid = function( m, err, options ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
-            res.writeHead( 400, "Bad Request" );
-            res.write( err.toString() );
-            res.end()
+            _res.writeHead( 400, "Bad Request" );
+            _res.write( err.toString() );
+            _res.end()
         };
 
         var on_success = function( m, r, options ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
-            res.write( JSON.stringify( m ) );
-            res.end()
+            _res.write( JSON.stringify( m ) );
+            _res.end()
         }
         
         req.collection = collection.on( "error", on_error )
