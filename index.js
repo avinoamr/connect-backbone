@@ -18,7 +18,7 @@ module.exports = function ( Collection ) {
             if ( !options.res ) return;
             var _res = ( options.res === true ) ? res : options.res;
             var code = 500, msg = "Internal Server Error";
-            if ( [ "NotFoundError", "NotFound" ].indexOf( err.name ) == -1 ) {
+            if ( [ "NotFoundError", "NotFound" ].indexOf( err.name ) !== -1 ) {
                 code = 404
                 msg = "Not Found"
             }
